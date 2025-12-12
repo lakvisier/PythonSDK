@@ -1,44 +1,54 @@
-# Visier Employee Data Query Demo
+# Visier Python SDK - Employee Data Query
 
-A simple Python script to query employee data from the Visier Platform using the official Visier Python SDK.
+A simple, educational project demonstrating how to query employee data from the Visier Platform using the official Visier Python SDK.
 
-## Overview
+## 🎯 Quick Start
 
-This project demonstrates how to:
-- Authenticate with Visier Platform using basic authentication
-- Query employee data for a specific time period (recent month)
-- Retrieve specific employee properties: EmployeeID, Time_in_Role, and Span_Of_Control
-- Display results in a readable format
+Follow these simple steps to get started:
 
-## Prerequisites
+### 1. Install Python
 
-- Python 3.9 or higher
-- Visier Platform account with API access
-- API credentials (API key, username, password, vanity name)
+Make sure you have Python 3.9 or higher installed:
+```bash
+python3 --version
+```
 
-## Installation
+### 2. Clone or Download This Repository
 
-1. **Clone or download this repository**
+```bash
+git clone <repository-url>
+cd PythonSDK
+```
 
-2. **Create a virtual environment** (recommended):
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+Or simply download and extract the ZIP file.
 
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 3. Create a Virtual Environment (Recommended)
 
-## Configuration
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-1. **Copy the example environment file**:
+### 4. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+This installs:
+- `visier-platform-sdk` - The Visier Python SDK
+- `python-dotenv` - For loading environment variables
+- `pandas` - For data analysis
+- `jupyter` - For running the notebook
+
+### 5. Configure Your Credentials
+
+1. Copy the example environment file:
    ```bash
    cp visier.env.example .env
    ```
 
-2. **Edit `.env` with your Visier credentials**:
+2. Edit `.env` with your Visier credentials:
    ```env
    VISIER_HOST=https://your-tenant.api.visier.io
    VISIER_APIKEY=your-api-key
@@ -47,158 +57,187 @@ This project demonstrates how to:
    VISIER_PASSWORD=your-password
    ```
 
-   **⚠️ Security Note:** Never commit your `.env` file to version control. It's already included in `.gitignore`.
+   **⚠️ Important:** Never commit your `.env` file to version control. It's already in `.gitignore`.
 
-## Usage
+### 6. Launch the Notebook
 
-### Quick Demo Script
-
-Run the simple demo script:
-```bash
-python employee_query.py
-```
-
-This script quickly queries and displays employee data.
-
-### Interactive Walkthrough (Recommended for Learning)
-
-**Option 1: Python Script**
-```bash
-python interactive_walkthrough.py
-```
-
-**Option 2: Jupyter Notebook (Best for Learning)**
 ```bash
 jupyter notebook visier_sdk_walkthrough.ipynb
 ```
 
-The interactive walkthrough:
-- Explains each step in detail
-- Shows code examples with explanations
-- Allows you to run code step-by-step
-- Teaches SDK concepts as you go
-- Perfect for learning how the SDK works
-- **Notebook version**: Run cells individually, see results immediately, modify and experiment
+This will open the notebook in your web browser. Follow along step by step!
 
-The script will:
-1. Load credentials from your `.env` file
-2. Authenticate with Visier Platform
-3. Query employee data for the recent month (from the first day of the current month)
-4. Display results showing EmployeeID, Time in Role, and Span of Control
+## 📚 Learning Resources
 
-### Example Output
+### Interactive Notebook (Recommended)
 
-```
-======================================================================
-Visier Employee Data Query Demo
-======================================================================
+**`visier_sdk_walkthrough.ipynb`** - Start here!
 
-Step 1: Creating API client...
-✓ API client created
-  (Authentication will happen automatically on first API call)
+This Jupyter notebook provides a step-by-step walkthrough with:
+- ✅ Clear explanations of each step
+- ✅ Code examples you can run and modify
+- ✅ Visual output showing results
+- ✅ Educational content teaching SDK concepts
+- ✅ Basic data analysis examples
 
-Step 2: Building query...
-  Time period: From 2025-12-01 (start of current month)
-  Analytic Object: Employee
-  Properties: EmployeeID, Time_in_Role, Span_Of_Control
-✓ Query built
+**How to use:**
+1. Open the notebook: `jupyter notebook visier_sdk_walkthrough.ipynb`
+2. Run each cell in order (Shift+Enter)
+3. Read the explanations and experiment with the code
+4. Modify queries to explore different data
 
-Step 3: Executing query...
-✓ Query executed successfully
+### Quick Demo Script
 
-Step 4: Processing results...
+**`employee_query.py`** - For quick testing
 
-======================================================================
-Query Results
-======================================================================
-
-Found 4349 employee record(s):
-
-  Employee ID  Time in Role  Span of Control
-Employee-6034            22                0
-Employee-6566            13                0
-Employee-7350             1                0
-...
-
-======================================================================
-Demo completed successfully!
-  Shape: 4349 rows, 3 columns
-======================================================================
+A simple script that queries and displays employee data:
+```bash
+python employee_query.py
 ```
 
-## Project Structure
+### Interactive Walkthrough Script
+
+**`interactive_walkthrough.py`** - Command-line version
+
+Same educational content as the notebook, but as a Python script:
+```bash
+python interactive_walkthrough.py
+```
+
+## 📖 What You'll Learn
+
+By following the notebook, you'll learn how to:
+
+1. **Configure the SDK** - Set up authentication and connection
+2. **Create API Clients** - Understand how the SDK manages connections
+3. **Build Queries** - Define what data you want to retrieve
+4. **Execute Queries** - Send requests to Visier and get responses
+5. **Process Results** - Convert API responses to usable formats
+6. **Analyze Data** - Perform basic analysis on the retrieved data
+
+## 🔍 Example Query
+
+The notebook demonstrates querying employee data with:
+- **EmployeeID** - Unique employee identifier
+- **Time_in_Role** - How long the employee has been in their current role (months)
+- **Span_Of_Control** - Number of direct reports
+
+## 📁 Project Structure
 
 ```
 .
-├── employee_query.py          # Quick demo script
-├── interactive_walkthrough.py # Educational walkthrough script
-├── visier_sdk_walkthrough.ipynb # Educational walkthrough notebook (recommended)
-├── requirements.txt           # Python dependencies
-├── visier.env.example        # Example environment variables
-├── .env                      # Your credentials (not in git)
-├── .gitignore               # Git ignore rules
-└── README.md                 # This file
+├── visier_sdk_walkthrough.ipynb  # ⭐ Start here! Interactive notebook
+├── employee_query.py              # Quick demo script
+├── interactive_walkthrough.py     # Educational script version
+├── requirements.txt               # Python dependencies
+├── visier.env.example            # Environment variables template
+├── .env                          # Your credentials (create this)
+├── .gitignore                   # Git ignore rules
+└── README.md                     # This file
 ```
 
-## Customization
+## 🛠️ Troubleshooting
+
+### "ModuleNotFoundError: No module named 'visier_platform_sdk'"
+
+**Solution:** Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### "Missing required environment variables"
+
+**Solution:** 
+1. Make sure you've created `.env` from `visier.env.example`
+2. Fill in all required variables with your Visier credentials
+3. Check that variable names match exactly (case-sensitive)
+
+### "Authentication failed"
+
+**Solution:**
+- Verify your credentials in `.env` file
+- Check that `VISIER_VANITY` matches your tenant
+- Ensure `VISIER_APIKEY` is set correctly
+
+### "No data returned"
+
+**Solution:**
+- The query uses December 1, 2024 as the time period
+- If your tenant doesn't have data for that date, modify the timestamp in the notebook
+- Check that the properties exist in your tenant
+
+### Jupyter Notebook won't start
+
+**Solution:**
+```bash
+pip install jupyter
+jupyter notebook visier_sdk_walkthrough.ipynb
+```
+
+## 📝 Customization
 
 ### Changing the Time Period
 
-Edit the `get_recent_month_timestamp()` function in `employee_query.py` to change the time period:
-
+In the notebook, find the query building cell and modify:
 ```python
-def get_recent_month_timestamp() -> str:
-    # Returns timestamp for first day of current month
-    # Modify this to use a different date
-    today = datetime.now()
-    first_day = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    timestamp_ms = int(first_day.timestamp() * 1000)
-    return str(timestamp_ms)
+'timeInterval': {'fromInstant': '1735689600000'}  # December 1, 2024
 ```
 
-**Note:** If you get "No data returned", you may need to use a specific date that has data in your Visier tenant. You can hardcode a timestamp like:
+To use a different date, calculate the timestamp:
 ```python
-return "1735689600000"  # December 1, 2024 (example)
+from datetime import datetime
+date = datetime(2024, 11, 1)  # November 1, 2024
+timestamp = str(int(date.timestamp() * 1000))
 ```
 
 ### Adding More Properties
 
-Edit the `build_query_dto()` function to add more columns:
-
+In the query building cell, add more columns to the `columns` array:
 ```python
-"columns": [
-    {"columnName": "Employee ID", "columnDefinition": {"property": {"name": "Employee.EmployeeID", "qualifyingPath": "Employee"}}},
-    {"columnName": "Time in Role", "columnDefinition": {"property": {"name": "Employee.Time_in_Role", "qualifyingPath": "Employee"}}},
-    # Add more columns here
-]
+{
+    'columnName': 'Your Property Name',
+    'columnDefinition': {
+        'property': {
+            'name': 'Employee.YourPropertyName',
+            'qualifyingPath': 'Employee'
+        }
+    }
+}
 ```
 
-## Troubleshooting
-
-### "Missing required environment variables"
-- Ensure your `.env` file exists and contains all required variables
-- Check that variable names match exactly (case-sensitive)
-
-### "Authentication failed"
-- Verify your credentials are correct
-- Check that your API key is valid
-- Ensure your vanity name matches your tenant
-
-### "No data returned"
-- Verify the properties exist in your Visier tenant
-- Check that you have permissions to access the Employee analytic object
-- Try adjusting the time period
-
-### "ModuleNotFoundError"
-- Make sure you've activated your virtual environment
-- Run `pip install -r requirements.txt` to install dependencies
-
-## Resources
+## 🔗 Resources
 
 - [Visier Python SDK Documentation](https://github.com/visier/python-sdk)
 - [Visier API Reference](https://documentation.visier.com/)
 - [Visier API Samples](https://github.com/visier/api-samples)
 
-## License
+## 💡 Tips
 
-This project is provided as-is for educational purposes.
+- **Start with the notebook** - It's the best way to learn
+- **Run cells one at a time** - Don't rush, read the explanations
+- **Experiment** - Try modifying the query to see what happens
+- **Check the output** - Each cell shows you what's happening
+- **Save your work** - The notebook saves automatically
+
+## ✅ Success Checklist
+
+Before you start, make sure you have:
+- [ ] Python 3.9+ installed
+- [ ] Virtual environment created and activated
+- [ ] Dependencies installed (`pip install -r requirements.txt`)
+- [ ] `.env` file created with your Visier credentials
+- [ ] Jupyter installed (`pip install jupyter`)
+- [ ] Notebook opens successfully
+
+## 🎓 Next Steps
+
+After completing the notebook:
+1. Try modifying the query to get different properties
+2. Experiment with different time periods
+3. Explore other API methods (aggregate, snapshot)
+4. Build your own queries for your use case
+5. Check out the official SDK documentation for advanced features
+
+---
+
+**Ready to start?** Open `visier_sdk_walkthrough.ipynb` and follow along! 🚀
