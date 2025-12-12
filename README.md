@@ -51,15 +51,28 @@ This project demonstrates how to:
 
 ## Usage
 
-Run the script:
+### Quick Demo Script
+
+Run the simple demo script:
 ```bash
 python employee_query.py
 ```
 
-Or if you prefer:
+This script quickly queries and displays employee data.
+
+### Interactive Walkthrough (Recommended for Learning)
+
+For an educational experience with step-by-step explanations:
 ```bash
-python3 employee_query.py
+python interactive_walkthrough.py
 ```
+
+The interactive walkthrough:
+- Explains each step in detail
+- Shows code examples with explanations
+- Waits for you to proceed at your own pace
+- Teaches SDK concepts as you go
+- Perfect for learning how the SDK works
 
 The script will:
 1. Load credentials from your `.env` file
@@ -111,12 +124,13 @@ Demo completed successfully!
 
 ```
 .
-├── employee_query.py      # Main script
-├── requirements.txt       # Python dependencies
-├── visier.env.example    # Example environment variables
-├── .env                  # Your credentials (not in git)
-├── .gitignore           # Git ignore rules
-└── README.md            # This file
+├── employee_query.py          # Quick demo script
+├── interactive_walkthrough.py # Educational walkthrough (recommended)
+├── requirements.txt           # Python dependencies
+├── visier.env.example        # Example environment variables
+├── .env                      # Your credentials (not in git)
+├── .gitignore               # Git ignore rules
+└── README.md                 # This file
 ```
 
 ## Customization
