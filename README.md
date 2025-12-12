@@ -62,17 +62,23 @@ This script quickly queries and displays employee data.
 
 ### Interactive Walkthrough (Recommended for Learning)
 
-For an educational experience with step-by-step explanations:
+**Option 1: Python Script**
 ```bash
 python interactive_walkthrough.py
+```
+
+**Option 2: Jupyter Notebook (Best for Learning)**
+```bash
+jupyter notebook visier_sdk_walkthrough.ipynb
 ```
 
 The interactive walkthrough:
 - Explains each step in detail
 - Shows code examples with explanations
-- Waits for you to proceed at your own pace
+- Allows you to run code step-by-step
 - Teaches SDK concepts as you go
 - Perfect for learning how the SDK works
+- **Notebook version**: Run cells individually, see results immediately, modify and experiment
 
 The script will:
 1. Load credentials from your `.env` file
@@ -125,7 +131,8 @@ Demo completed successfully!
 ```
 .
 ├── employee_query.py          # Quick demo script
-├── interactive_walkthrough.py # Educational walkthrough (recommended)
+├── interactive_walkthrough.py # Educational walkthrough script
+├── visier_sdk_walkthrough.ipynb # Educational walkthrough notebook (recommended)
 ├── requirements.txt           # Python dependencies
 ├── visier.env.example        # Example environment variables
 ├── .env                      # Your credentials (not in git)
