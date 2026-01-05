@@ -24,13 +24,34 @@ Or simply download and extract the ZIP file.
 
 ### 3. Create a Virtual Environment (Recommended)
 
+**Option A: Using `uv` (Recommended for modern setups)**
+
+If you have `uv` installed (via Homebrew: `brew install uv`):
+
+```bash
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -r requirements.txt
+```
+
+**Option B: Using traditional `venv` and `pip`**
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
 ### 4. Install Dependencies
 
+If you haven't already installed dependencies in step 3:
+
+**With `uv`:**
+```bash
+uv pip install -r requirements.txt
+```
+
+**With `pip`:**
 ```bash
 pip install -r requirements.txt
 ```
@@ -141,6 +162,13 @@ The notebook demonstrates querying employee data with:
 ### "ModuleNotFoundError: No module named 'visier_platform_sdk'"
 
 **Solution:** Install dependencies:
+
+**With `uv`:**
+```bash
+uv pip install -r requirements.txt
+```
+
+**With `pip`:**
 ```bash
 pip install -r requirements.txt
 ```
@@ -166,12 +194,25 @@ pip install -r requirements.txt
 - If your tenant doesn't have data for that date, modify the timestamp in the notebook
 - Check that the properties exist in your tenant
 
-### Jupyter Notebook won't start
+### "Jupyter not found" or "Jupyter Notebook won't start"
 
-**Solution:**
+**Solution:** Make sure Jupyter is installed:
+
+**With `uv`:**
+```bash
+uv pip install jupyter
+jupyter notebook visier_sdk_walkthrough.ipynb
+```
+
+**With `pip`:**
 ```bash
 pip install jupyter
 jupyter notebook visier_sdk_walkthrough.ipynb
+```
+
+**Note:** If you're using `uv`, make sure your virtual environment is activated:
+```bash
+source .venv/bin/activate  # or source venv/bin/activate if using traditional venv
 ```
 
 ## 📝 Customization
