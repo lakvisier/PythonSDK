@@ -2,7 +2,23 @@
 
 A simple, educational project demonstrating how to query employee data from the Visier Platform using the official Visier Python SDK.
 
-## 🎯 Quick Start
+## 🎯 Project Goals & Progress
+
+### Primary Goal
+> **📝 Placeholder for Primary Goal**  
+> *The primary project goal will be documented here once shared. This section will outline the main objective we're working towards.*
+
+### Progress Tracking
+See [PROGRESS.md](./PROGRESS.md) for detailed progress tracking of completed work, work in progress, and planned features.
+
+**Quick Status:**
+- ✅ **Phase 1 Complete**: Basic list queries, interactive tutorials, and documentation
+- 🚧 **Phase 2 Complete**: Aggregate query planning and analysis
+- 📋 **Phase 3 Planned**: Aggregate query implementation
+- 📋 **Phase 4 Planned**: Advanced features and utilities
+- 📋 **Phase 5 Planned**: Comprehensive documentation and examples
+
+## 🚀 Quick Start
 
 Follow these simple steps to get started:
 
@@ -150,6 +166,8 @@ The notebook demonstrates querying employee data with:
 ├── visier_sdk_walkthrough.ipynb  # ⭐ Start here! Interactive notebook
 ├── employee_query.py              # Quick demo script
 ├── interactive_walkthrough.py     # Educational script version
+├── AGGREGATE_QUERY_PLAN.md        # Implementation plan for aggregate queries
+├── PROGRESS.md                    # Detailed progress tracking
 ├── requirements.txt               # Python dependencies
 ├── visier.env.example            # Environment variables template
 ├── .env                          # Your credentials (create this)
