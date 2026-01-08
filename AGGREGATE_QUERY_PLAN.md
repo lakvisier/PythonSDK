@@ -283,7 +283,9 @@ The `options` field in `AggregationQueryExecutionDTO` supports:
 
 ## References
 
-- SDK Source: `visier-sdk-source/`
-- Example Queries: `visier-sdk-source/query_examples/aggregate/`
-- Integration Tests: `visier-sdk-source/tests/integration/test_data_query_api.py`
-- API Documentation: `visier-sdk-source/src/visier_platform_sdk/visier_platform_sdk/api/data_query_api.py`
+- **Official API Documentation**: [Visier Data Query Aggregate Operation](https://docs.visier.com/visier-people/apis/references/api-reference.htm#tag/DataQuery/operation/DataQuery_Aggregate)
+- **SDK Source**: `visier-sdk-source/`
+- **Example Queries**: `visier-sdk-source/query_examples/aggregate/`
+- **Integration Tests**: `visier-sdk-source/tests/integration/test_data_query_api.py`
+- **API Implementation**: `visier-sdk-source/src/visier_platform_sdk/visier_platform_sdk/api/data_query_api.py`
+- **Model Definitions**: `visier-sdk-source/src/visier_platform_sdk/visier_platform_sdk/models/`
