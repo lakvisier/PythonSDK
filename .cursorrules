@@ -1,0 +1,19 @@
+# Cursor AI Project Context
+
+## Package Management
+- This project uses `uv` for Python package management (installed and available)
+- Traditional `venv` + `pip` is also supported as an alternative
+- When suggesting installation commands, prefer `uv` since it's available in this environment
+
+## Project Setup
+- Python 3.9+ required
+- Virtual environment should be created using `uv venv` (or traditional `python3 -m venv venv`)
+- Dependencies are managed via `requirements.txt`
+- Environment variables are loaded from `.env` file (see `visier.env.example`)
+
+## Development Tools
+- Jupyter Notebook/Lab for interactive development
+- Visier Python SDK for API interactions
+- pandas for data analysis
+
+

@@ -24,17 +24,9 @@ Or simply download and extract the ZIP file.
 
 ### 3. Create a Virtual Environment (Recommended)
 
-**Option A: Using `uv` (Recommended for modern setups)**
+**Option A: Using traditional `venv` and `pip` (Most Common)**
 
-If you have `uv` installed (via Homebrew: `brew install uv`):
-
-```bash
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -r requirements.txt
-```
-
-**Option B: Using traditional `venv` and `pip`**
+This is the standard Python approach that works everywhere:
 
 ```bash
 python3 -m venv venv
@@ -42,27 +34,19 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4. Install Dependencies
+**Option B: Using `uv` (Modern Alternative)**
 
-If you haven't already installed dependencies in step 3:
+`uv` is a newer, faster Python package installer. If you have it installed (via Homebrew: `brew install uv`), you can use it:
 
-**With `uv`:**
 ```bash
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -r requirements.txt
 ```
 
-**With `pip`:**
-```bash
-pip install -r requirements.txt
-```
+**Note:** `uv` is optional and not required. The traditional `venv` + `pip` method (Option A) works perfectly fine and is what most Python developers use.
 
-This installs:
-- `visier-platform-sdk` - The Visier Python SDK
-- `python-dotenv` - For loading environment variables
-- `pandas` - For data analysis
-- `jupyter` - For running the notebook
-
-### 5. Configure Your Credentials
+### 4. Configure Your Credentials
 
 1. Copy the example environment file:
    ```bash
@@ -76,14 +60,30 @@ This installs:
    VISIER_VANITY=your-vanity-name
    VISIER_USERNAME=your-username
    VISIER_PASSWORD=your-password
+   # Optional: Only required for specific operations
+   VISIER_TENANT_CODE=tenant-code
    ```
 
    **⚠️ Important:** Never commit your `.env` file to version control. It's already in `.gitignore`.
 
-### 6. Launch the Notebook
+   **Note:** The following packages will be installed from `requirements.txt`:
+   - `visier-platform-sdk` - The Visier Python SDK
+   - `python-dotenv` - For loading environment variables
+   - `pandas` - For data analysis
+   - `jupyter` - For running the notebook
 
+### 5. Launch the Notebook
+
+You can use either Jupyter Notebook or JupyterLab:
+
+**Option A: Jupyter Notebook (Classic)**
 ```bash
 jupyter notebook visier_sdk_walkthrough.ipynb
+```
+
+**Option B: JupyterLab (Modern Interface)**
+```bash
+jupyter lab visier_sdk_walkthrough.ipynb
 ```
 
 This will open the notebook in your web browser. Follow along step by step!
@@ -102,7 +102,7 @@ This Jupyter notebook provides a step-by-step walkthrough with:
 - ✅ Basic data analysis examples
 
 **How to use:**
-1. Open the notebook: `jupyter notebook visier_sdk_walkthrough.ipynb`
+1. Open the notebook: `jupyter notebook visier_sdk_walkthrough.ipynb` (or use `jupyter lab`)
 2. Run each cell in order (Shift+Enter)
 3. Read the explanations and experiment with the code
 4. Modify queries to explore different data
@@ -161,17 +161,19 @@ The notebook demonstrates querying employee data with:
 
 ### "ModuleNotFoundError: No module named 'visier_platform_sdk'"
 
-**Solution:** Install dependencies:
+**Solution:** Make sure you've completed step 3 (Create Virtual Environment) which installs dependencies. If you skipped it or need to reinstall:
 
-**With `uv`:**
+**Using traditional `pip` (most common):**
+```bash
+pip install -r requirements.txt
+```
+
+**Or using `uv` (if you have it installed):**
 ```bash
 uv pip install -r requirements.txt
 ```
 
-**With `pip`:**
-```bash
-pip install -r requirements.txt
-```
+**Note:** Make sure your virtual environment is activated before running the scripts or notebook.
 
 ### "Missing required environment variables"
 
@@ -196,23 +198,27 @@ pip install -r requirements.txt
 
 ### "Jupyter not found" or "Jupyter Notebook won't start"
 
-**Solution:** Make sure Jupyter is installed:
+**Solution:** Make sure Jupyter is installed. It should already be installed from `requirements.txt` in step 3, but if needed:
 
-**With `uv`:**
-```bash
-uv pip install jupyter
-jupyter notebook visier_sdk_walkthrough.ipynb
-```
-
-**With `pip`:**
+**Using traditional `pip` (most common):**
 ```bash
 pip install jupyter
 jupyter notebook visier_sdk_walkthrough.ipynb
+# Or use JupyterLab:
+# jupyter lab visier_sdk_walkthrough.ipynb
 ```
 
-**Note:** If you're using `uv`, make sure your virtual environment is activated:
+**Or using `uv` (if you have it installed):**
 ```bash
-source .venv/bin/activate  # or source venv/bin/activate if using traditional venv
+uv pip install jupyter
+jupyter notebook visier_sdk_walkthrough.ipynb
+# Or use JupyterLab:
+# jupyter lab visier_sdk_walkthrough.ipynb
+```
+
+**Note:** Make sure your virtual environment is activated:
+```bash
+source venv/bin/activate  # or source .venv/bin/activate if using uv
 ```
 
 ## 📝 Customization
@@ -224,11 +230,11 @@ In the notebook, find the query building cell and modify:
 'timeInterval': {'fromInstant': '1735689600000'}  # December 1, 2024
 ```
 
-To use a different date, calculate the timestamp:
+To use a different date, calculate the timestamp (in milliseconds):
 ```python
 from datetime import datetime
 date = datetime(2024, 11, 1)  # November 1, 2024
-timestamp = str(int(date.timestamp() * 1000))
+timestamp = str(int(date.timestamp() * 1000))  # Convert to milliseconds
 ```
 
 ### Adding More Properties
@@ -265,9 +271,9 @@ In the query building cell, add more columns to the `columns` array:
 Before you start, make sure you have:
 - [ ] Python 3.9+ installed
 - [ ] Virtual environment created and activated
-- [ ] Dependencies installed (`pip install -r requirements.txt`)
-- [ ] `.env` file created with your Visier credentials
-- [ ] Jupyter installed (`pip install jupyter`)
+- [ ] Dependencies installed (from `requirements.txt` in step 3)
+- [ ] `.env` file created with your Visier credentials (from step 4)
+- [ ] Jupyter installed (included in `requirements.txt`)
 - [ ] Notebook opens successfully
 
 ## 🎓 Next Steps
