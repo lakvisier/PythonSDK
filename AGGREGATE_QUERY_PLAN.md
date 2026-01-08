@@ -23,9 +23,32 @@ Aggregate queries use a different structure than list queries:
 - Time Intervals: Time period specification
 - Returns: `CellSetDTO` with cells and axes
 
-### 2. Example Query Structure
+### 2. Example Query Structures
 
-From `visier-sdk-source/tests/integration/data/queries/aggregate.json`:
+**Example 1: Simple query with dynamic date** (from [Visier API Documentation](https://docs.visier.com/visier-people/apis/references/api-reference.htm#tag/DataQuery/operation/DataQuery_Aggregate)):
+
+```json
+{
+  "query": {
+    "source": {
+      "metric": "employeeCount"
+    },
+    "timeIntervals": {
+      "intervalCount": 3,
+      "dynamicDateFrom": "SOURCE"
+    },
+    "axes": [
+      {
+        "dimension": {
+          "name": "Gender"
+        }
+      }
+    ]
+  }
+}
+```
+
+**Example 2: Complex query with filters** (from SDK test files):
 
 ```json
 {
@@ -70,6 +93,12 @@ From `visier-sdk-source/tests/integration/data/queries/aggregate.json`:
 }
 ```
 
+**Key Observations:**
+- Axes can be simplified: `{"dimension": {"name": "Gender"}}` OR full structure with `dimensionLevelSelection`
+- Time intervals support multiple formats:
+  - `dynamicDateFrom: "SOURCE"` with `intervalCount` (simpler, relative to data)
+  - `fromDateTime` with `intervalPeriodType` and `intervalCount` (absolute date)
+
 ### 3. API Method
 
 ```python
@@ -78,8 +107,12 @@ from visier_platform_sdk.models import AggregationQueryExecutionDTO
 
 data_query_api = DataQueryApi(api_client)
 response = data_query_api.aggregate(aggregation_query_dto)
-# Returns: CellSetOrErrorDTO (which contains CellSetDTO)
+# Returns: CellSetOrErrorDTO (which contains CellSetDTO or error)
+# Access: response.cell_set (if successful) or response.error (if failed)
 ```
+
+**Endpoint**: `POST /v1/data/query/aggregate`  
+**Reference**: [Visier API Documentation](https://docs.visier.com/visier-people/apis/references/api-reference.htm#tag/DataQuery/operation/DataQuery_Aggregate)
 
 ### 4. Response Structure
 
@@ -199,43 +232,54 @@ Based on SDK examples:
 - **Test Code**: Accesses `cell_set_dto.axes` and `cell_set_dto.cells` directly, suggesting it's `CellSetDTO`
 - **Resolution Needed**: Verify if the API unwraps automatically or if we need to check `response.cell_set` vs `response.error`
 
-### 2. Time Interval Field Names
-- Some examples use `intervalCount` (aggregate.json, list.json)
-- Other examples use `intervalPeriodCount` (applicants-source.json, snapshot.json)
-- Some examples use BOTH (snapshot.json has both fields)
-- **Resolution Needed**: Determine which field(s) are correct and when to use each
+### 2. Time Interval Field Names - RESOLVED
+- **`intervalCount`**: Number of periods to include (e.g., 3 months)
+- **`intervalPeriodCount`**: Appears to be an alternative/legacy field name
+- **`dynamicDateFrom`**: Can be set to `"SOURCE"` to automatically determine start date from available data
+- **`fromDateTime`**: Explicit start date (ISO-8601 format: `"2021-01-01"`)
+- **`intervalPeriodType`**: Type of period (`"MONTH"`, `"QUARTER"`, `"YEAR"`, etc.)
+- **Resolution**: Use `intervalCount` with either `dynamicDateFrom: "SOURCE"` (simpler) OR `fromDateTime` + `intervalPeriodType` (explicit)
 
-### 3. Query Options
-- The applicants-source.json example includes an `options` field with `zeroVisibility` and `nullVisibility`
-- The aggregate.json test example does NOT include options
-- **Resolution Needed**: Document when options are needed and what they do
+### 3. Query Options - DOCUMENTED
+The `options` field in `AggregationQueryExecutionDTO` supports:
+- **`zeroVisibility`**: `"SHOW"`, `"HIDE"`, or `"ELIMINATE"` (default: `"SHOW"`)
+- **`nullVisibility`**: `"SHOW"`, `"HIDE"`, or `"ELIMINATE"` (default: `"SHOW"`)
+- **`memberDisplayMode`**: `"DEFAULT"`, `"COMPACT"`, `"DISPLAY"`, `"MDX"`, `"COMPACT_DISPLAY"` (default: `"DEFAULT"`)
+- **`axesOverallValueMode`**: `"NONE"`, `"AGGREGATE"`, `"OVERALL"` (default: `"NONE"`)
+- **`axisVisibility`**: `"SIMPLE"` or `"VERBOSE"` (default: `"SIMPLE"`)
+- **`enableSparseResults`**: Boolean - only return non-zero/non-null cells
+- **`calendarType`**: `"TENANT_CALENDAR"` or `"GREGORIAN_CALENDAR"` (default: `"TENANT_CALENDAR"`)
+- Options are **optional** - defaults work for most use cases
 
 ## Questions to Resolve
 
-1. **Response Handling**: Does `aggregate()` return `CellSetOrErrorDTO` that needs unwrapping, or does it return `CellSetDTO` directly? How should we handle errors?
+1. **Response Handling**: The API returns `CellSetOrErrorDTO`. We need to check:
+   - `response.cell_set` if successful (contains `CellSetDTO`)
+   - `response.error` if failed (contains `QueryExecutionErrorDTO`)
+   - **Action**: Implement proper error checking and unwrapping
 
-2. **Time Intervals**: What's the difference between `intervalCount` and `intervalPeriodCount`? When should each be used?
-
-3. **Metric Discovery**: How do you want to discover available metrics in your tenant?
+2. **Metric Discovery**: How do you want to discover available metrics in your tenant?
    - Use MetricsV2Api to list all metrics?
    - Hardcode common metric IDs?
    - Provide a utility function to search/browse?
 
-4. **Use Cases**: What specific aggregate queries do you need?
+3. **Use Cases**: What specific aggregate queries do you need?
    - Simple metric queries (e.g., "total headcount")?
    - Grouped by dimensions (e.g., "headcount by department")?
    - Filtered queries (e.g., "headcount for managers only")?
    - Time series (e.g., "headcount over 6 months")?
 
-5. **Metric IDs**: Do you know the exact metric IDs in your tenant, or do we need to discover them first?
+4. **Metric IDs**: Do you know the exact metric IDs in your tenant, or do we need to discover them first?
 
-6. **Output Format**: How do you want to consume the results?
+5. **Output Format**: How do you want to consume the results?
    - Simple DataFrame (flattened)?
    - Pivot table format?
    - Raw CellSet structure?
    - Visualization-ready format?
 
-7. **Error Handling**: How should we handle query errors? Show error details, retry logic, etc.?
+6. **Error Handling**: How should we handle query errors? Show error details, retry logic, etc.?
+
+7. **Axes Structure**: Should we support both simplified axes (`{"dimension": {"name": "Gender"}}`) and full structure (`dimensionLevelSelection`)? Or start with one?
 
 ## References
 
