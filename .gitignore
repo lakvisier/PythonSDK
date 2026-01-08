@@ -50,5 +50,8 @@ data/
 # Logs
 *.log
 
+# Cloned SDK source (for reference only, not part of this repo)
+visier-sdk-source/
+
 
 

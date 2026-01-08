@@ -11,9 +11,9 @@ Usage:
 
 import sys
 import warnings
-import json
 from datetime import datetime
 import time
+from typing import Optional
 
 warnings.filterwarnings('ignore', message='.*urllib3.*NotOpenSSLWarning.*')
 warnings.filterwarnings('ignore', message='.*urllib3 v2 only supports OpenSSL.*')
@@ -25,7 +25,7 @@ except ImportError:
     pass
 
 from visier_platform_sdk import ApiClient, Configuration, DataQueryApi
-from visier_platform_sdk.models import ListQueryExecutionDTO
+from visier_platform_sdk.models import ListQueryExecutionDTO, ListResponse
 from visier_platform_sdk.exceptions import (
     ServiceException, 
     ApiException, 
@@ -78,7 +78,7 @@ def get_timestamp() -> str:
     return "1735689600000"  # December 1, 2024
 
 
-def build_query_dto():
+def build_query_dto() -> ListQueryExecutionDTO:
     """Build a query DTO for employee data."""
     timestamp = get_timestamp()
     
@@ -93,33 +93,38 @@ def build_query_dto():
         "options": {"limit": 10000, "page": 0}
     }
     
-    json_string = json.dumps(query_dict)
-    query_dto = ListQueryExecutionDTO.from_json(json_string)
+    # Use from_dict() instead of from_json() - simpler and more direct
+    query_dto = ListQueryExecutionDTO.from_dict(query_dict)
     
     return query_dto
 
 
-def convert_response_to_dataframe(response_dto):
-    """Convert SDK response DTO to pandas DataFrame."""
-    if response_dto is None:
+def convert_response_to_dataframe(response: ListResponse):
+    """
+    Convert SDK ListResponse to pandas DataFrame.
+    
+    The SDK's list() method returns a ListResponse object which is a Pydantic model
+    with 'header' and 'rows' attributes. We access them directly to avoid Pydantic
+    serialization warnings.
+    """
+    if response is None:
         raise ValueError("Response is None")
     
-    if hasattr(response_dto, 'to_dict'):
-        data = response_dto.to_dict()
-    elif hasattr(response_dto, '__dict__'):
-        data = {}
-        if hasattr(response_dto, 'header'):
-            data['header'] = response_dto.header
-        if hasattr(response_dto, 'rows'):
-            data['rows'] = response_dto.rows
-    else:
-        data = response_dto
+    # Access attributes directly to avoid Pydantic serialization warnings
+    # header and rows are Any types but are typically dicts in practice
+    header = response.header
+    rows = response.rows
     
-    if not data:
-        raise ValueError("Response data is empty")
+    # Convert to dict if they're Pydantic models, otherwise use as-is
+    if header is not None and hasattr(header, 'to_dict'):
+        header = header.to_dict()
+    elif header is None:
+        header = {}
     
-    header = data.get("header", {})
-    rows = data.get("rows", [])
+    if rows is None:
+        rows = []
+    elif rows and hasattr(rows[0], 'to_dict'):
+        rows = [row.to_dict() if hasattr(row, 'to_dict') else row for row in rows]
     
     if not rows:
         raise ValueError("No data rows found in response")
