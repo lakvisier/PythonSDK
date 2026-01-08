@@ -35,16 +35,23 @@ This document tracks the progression of work on the Visier Python SDK project.
 
 ## Work In Progress 🚧
 
-### Phase 3: Aggregate Queries (Planned)
-- [ ] **Basic Aggregate Query Implementation**
-  - Implement `aggregate_query.py` with basic functionality
-  - Handle `CellSetOrErrorDTO` response structure
-  - Convert CellSet to DataFrame
-  - Error handling for aggregate queries
+### Phase 3: Aggregate Queries
+- [x] **Basic Aggregate Query Implementation** (`aggregate_query.py`)
+  - ✅ Implemented `build_aggregate_query_dto()` function
+  - ✅ Implemented `execute_aggregate_query()` with proper `CellSetOrErrorDTO` handling
+  - ✅ Implemented `convert_cellset_to_dataframe()` function
+  - ✅ Added example usage with `employeeCount` metric
+  - ✅ Comprehensive error handling for aggregate queries
+  - ✅ Support for axes (dimensions), filters, and time intervals
+  - ✅ User-friendly output and display functions
 
-- [ ] **Metric Discovery**
-  - Utility functions to discover available metrics
-  - Search and filter capabilities
+- [x] **Metric Discovery** (`metric_discovery.py`)
+  - ✅ Utility to list all predefined metrics using MetricsV2Api
+  - ✅ Filter metrics by analytic object (e.g., Employee, Applicant)
+  - ✅ Filter by metric type (simple or derived)
+  - ✅ Search capabilities by name or description
+  - ✅ Command-line interface with multiple options
+  - ✅ Formatted output showing Metric IDs and Display Names
 
 - [ ] **Enhanced Query Builder**
   - Helper functions for common query patterns
@@ -70,13 +77,20 @@ This document tracks the progression of work on the Visier Python SDK project.
 ### Key Findings
 - List queries use `ListQueryExecutionDTO` with `analyticObject` source
 - Aggregate queries use `AggregationQueryExecutionDTO` with `metric` source
-- Response handling: `aggregate()` returns `CellSetOrErrorDTO` (needs unwrapping)
-- Time interval fields: `intervalCount` vs `intervalPeriodCount` discrepancy found
+- Response handling: `aggregate()` returns `CellSetOrErrorDTO` (needs unwrapping) ✅ RESOLVED
+- Time interval fields: `intervalCount` with `dynamicDateFrom: "SOURCE"` works well
+- CellSet structure: cells have coordinates mapping to axis positions
+- DataFrame conversion: Maps coordinates to dimension values from axis positions
 
-### Issues to Resolve
-1. Response type handling for `CellSetOrErrorDTO`
-2. Time interval field naming conventions
-3. Query options usage and requirements
+### Issues Resolved
+1. ✅ Response type handling for `CellSetOrErrorDTO` - Implemented proper error checking
+2. ✅ Time interval field naming - Using `intervalCount` with `dynamicDateFrom: "SOURCE"`
+3. ✅ Query options usage - Documented in plan, optional in implementation
+
+### Remaining Questions
+- Metric discovery: Need to determine best approach (MetricsV2Api vs hardcoded list)
+- CellSet position structure: May need refinement based on actual API responses
+- Multi-dimensional pivot tables: Advanced DataFrame conversion for Phase 4
 
 ---
 

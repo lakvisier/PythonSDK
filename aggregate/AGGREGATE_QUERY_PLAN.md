@@ -1,7 +1,9 @@
 # Aggregate Query Implementation Plan for Predefined Metrics
 
 ## Overview
-This document outlines the plan for implementing aggregate queries for predefined metrics using the Visier Python SDK, based on analysis of the `visier-sdk-source` repository.
+This document outlines the plan for implementing aggregate queries for **predefined metrics** using the Visier Python SDK, based on analysis of the `visier-sdk-source` repository.
+
+**Focus**: We are working with **predefined metrics** (simple and derived metrics that already exist in your Visier tenant), not ad-hoc formulas or custom metrics created on-the-fly.
 
 ## Key Findings from SDK Source Analysis
 
@@ -233,23 +235,34 @@ Based on SDK examples:
 - **Resolution Needed**: Verify if the API unwraps automatically or if we need to check `response.cell_set` vs `response.error`
 
 ### 2. Time Interval Field Names - RESOLVED
-- **`intervalCount`**: Number of periods to include (e.g., 3 months)
-- **`intervalPeriodCount`**: Appears to be an alternative/legacy field name
-- **`dynamicDateFrom`**: Can be set to `"SOURCE"` to automatically determine start date from available data
+- **`intervalCount`**: Number of periods to include (e.g., 3 months) - **VALID**
+- **`intervalPeriodCount`**: Alternative field name - **ALSO VALID** (API accepts both)
+- **`dynamicDateFrom`**: Can be set to `"SOURCE"` or `"COMPLETE_PERIOD"` to automatically determine start date
 - **`fromDateTime`**: Explicit start date (ISO-8601 format: `"2021-01-01"`)
+- **`fromInstant`**: Start date as epoch milliseconds (string)
 - **`intervalPeriodType`**: Type of period (`"MONTH"`, `"QUARTER"`, `"YEAR"`, etc.)
-- **Resolution**: Use `intervalCount` with either `dynamicDateFrom: "SOURCE"` (simpler) OR `fromDateTime` + `intervalPeriodType` (explicit)
+- **`direction`**: `"BACKWARD"` or `"FORWARD"` (default: `"FORWARD"`)
+- **`shift`**: Optional time shift configuration
+- **`trailingPeriodType`** and **`trailingPeriodCount`**: Optional trailing period configuration
+- **Resolution**: Both `intervalCount` and `intervalPeriodCount` are valid. Use either with `dynamicDateFrom: "SOURCE"` (simpler) OR `fromDateTime` + `intervalPeriodType` (explicit)
 
 ### 3. Query Options - DOCUMENTED
-The `options` field in `AggregationQueryExecutionDTO` supports:
+The `options` field in `AggregationQueryExecutionDTO` supports many options (see `AGGREGATE_QUERY_API_REFERENCE.md` for full schema):
+
+**Common Options:**
 - **`zeroVisibility`**: `"SHOW"`, `"HIDE"`, or `"ELIMINATE"` (default: `"SHOW"`)
 - **`nullVisibility`**: `"SHOW"`, `"HIDE"`, or `"ELIMINATE"` (default: `"SHOW"`)
+- **`enableSparseResults`**: Boolean - only return non-zero/non-null cells
 - **`memberDisplayMode`**: `"DEFAULT"`, `"COMPACT"`, `"DISPLAY"`, `"MDX"`, `"COMPACT_DISPLAY"` (default: `"DEFAULT"`)
 - **`axesOverallValueMode`**: `"NONE"`, `"AGGREGATE"`, `"OVERALL"` (default: `"NONE"`)
 - **`axisVisibility`**: `"SIMPLE"` or `"VERBOSE"` (default: `"SIMPLE"`)
-- **`enableSparseResults`**: Boolean - only return non-zero/non-null cells
 - **`calendarType`**: `"TENANT_CALENDAR"` or `"GREGORIAN_CALENDAR"` (default: `"TENANT_CALENDAR"`)
-- Options are **optional** - defaults work for most use cases
+- **`currencyConversionMode`**: Currency conversion settings
+- **`lineageDepth`**: Integer for lineage tracking
+- **`cellDistributionOptions`**: Distribution binning options
+- **`internal`**: Internal options (sparseHandlingMode, alignTimeAxisToPeriodEnd, etc.)
+
+Options are **optional** - defaults work for most use cases. See API reference for complete schema.
 
 ## Questions to Resolve
 
@@ -283,6 +296,7 @@ The `options` field in `AggregationQueryExecutionDTO` supports:
 
 ## References
 
+- **API Reference Document**: See `AGGREGATE_QUERY_API_REFERENCE.md` for complete schema documentation
 - **Official API Documentation**: [Visier Data Query Aggregate Operation](https://docs.visier.com/visier-people/apis/references/api-reference.htm#tag/DataQuery/operation/DataQuery_Aggregate)
 - **SDK Source**: `visier-sdk-source/`
 - **Example Queries**: `visier-sdk-source/query_examples/aggregate/`
