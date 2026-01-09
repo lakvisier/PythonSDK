@@ -9,7 +9,7 @@ A project demonstrating how to query data from the Visier Platform using both th
 > *The primary project goal will be documented here once shared. This section will outline the main objective we're working towards.*
 
 ### Progress Tracking
-See [PROGRESS.md](./PROGRESS.md) for detailed progress tracking of completed work, work in progress, and planned features.
+See [docs/planning/PROGRESS.md](./docs/planning/PROGRESS.md) for detailed progress tracking of completed work, work in progress, and planned features.
 
 **Quick Status:**
 - ✅ **SDK Module Complete**: Detailed list queries, interactive tutorials, and documentation
@@ -29,19 +29,23 @@ This project is organized into two main modules:
 │
 ├── aggregate/                    # RESTful aggregate queries (no SDK)
 │   ├── aggregate_query_vanilla.py  # Main aggregate query module
-│   ├── example_simple_query.py     # Simple query examples
-│   ├── example_batch_query.py      # Batch query examples
-│   ├── output/                      # CSV output files directory
-│   ├── VANILLA_AGGREGATE_USAGE.md  # Single metric guide
-│   ├── BATCH_QUERY_GUIDE.md        # Batch query guide (50+ metrics)
-│   ├── AGGREGATE_QUERY_API_REFERENCE.md  # Full API schema reference
-│   └── AGGREGATE_QUERY_PLAN.md           # Implementation plan
+│   ├── scripts/                    # CLI tools and utilities
+│   │   ├── run_query.py            # CLI tool for running queries
+│   │   └── discover_dimension_levels.py  # Dimension level discovery
+│   ├── examples/                   # Example query payloads
+│   │   ├── query_payload_examples.json
+│   │   └── query_payload_examples_org_hierarchy.json
+│   ├── docs/                       # Documentation
+│   │   ├── README.md               # Usage guide
+│   │   └── LEARNINGS.md            # Query patterns and learnings
+│   ├── tests/                      # Test scripts
+│   └── output/                     # CSV output files directory
 │
-├── archive/                      # Deprecated implementations
-│   ├── aggregate_query.py        # Old SDK-based aggregate (deprecated)
-│   └── metric_discovery.py       # Metric discovery (not needed)
-│
-├── PROGRESS.md                       # Progress tracking
+├── docs/                             # Documentation and planning
+│   ├── api/                          # API specifications
+│   │   └── openapi.json              # OpenAPI 3.0 specification
+│   └── planning/                     # Planning documents and roadmaps
+├── visier-sdk-source/                # Visier SDK source code (reference)
 ├── requirements.txt                  # Python dependencies
 ├── visier.env.example                # Environment variables template
 └── README.md                         # This file
@@ -140,58 +144,46 @@ Use RESTful API calls (no SDK) for aggregate metric queries. Perfect for batch q
 
 **Quick Start:**
 
-**Single Metric:**
-```python
-from aggregate.aggregate_query_vanilla import query_metric
-
-# Simple query - last 6 months by Function
-df = query_metric("employeeCount", dimensions=["Function"])
-
-# Save to CSV
-df = query_metric("employeeCount", dimensions=["Function"], save_csv="results.csv")
+**Using the CLI Tool:**
+```bash
+# Run query from JSON payload file
+python aggregate/scripts/run_query.py --file aggregate/examples/query_payload_examples.json
 ```
 
-**Batch Query (50+ Metrics):**
+**Using Python API:**
 ```python
 from aggregate.aggregate_query_vanilla import (
-    query_multiple_metrics,
-    create_selection_concept_filter
+    execute_vanilla_aggregate_query,
+    convert_vanilla_response_to_dataframe,
+    create_dimension_axis
 )
 
-# Your 50 metrics
-metric_ids = ["employeeCount", "turnoverRate", "headcount", ...]
-
-# Query all with same dimensions and filters
-df = query_multiple_metrics(
-    metric_ids=metric_ids,
-    dimensions=["Function", "Gender"],
-    dimension_member_filters={"Function": ["Engineering", "Sales"]},
-    global_filters=[create_selection_concept_filter("isActive")],
-    save_csv="all_metrics.csv"
-)
+# Build query
+axes = [create_dimension_axis("Function")]
+response = execute_vanilla_aggregate_query(metric_id="employeeCount", axes=axes)
+df = convert_vanilla_response_to_dataframe(response, metric_id="employeeCount")
 ```
 
-**Run Examples:**
+**Run Query:**
 ```bash
-# Simple query example
-python aggregate/example_simple_query.py
+# Run query from JSON payload file
+python aggregate/scripts/run_query.py --file aggregate/examples/query_payload_examples.json
 
-# Batch query example
-python aggregate/example_batch_query.py
+# Or use the default payload
+python aggregate/scripts/run_query.py
 ```
 
 **Features:**
-- ✅ Simple `query_metric()` function
-- ✅ Batch queries: `query_multiple_metrics()` for 50+ metrics
-- ✅ Dimension member filtering (focus on specific members)
-- ✅ Global filters (apply across all metrics)
-- ✅ Automatic time period handling
-- ✅ Direct CSV export
-- ✅ No SDK dependencies - pure HTTP requests
+- ✅ RESTful API queries (no SDK dependencies)
+- ✅ Helper functions for building queries
+- ✅ Dimension member filtering
+- ✅ Time interval support
+- ✅ Direct CSV export via CLI tool
+- ✅ JSON payload-based queries
 
 **Documentation:**
-- [`aggregate/VANILLA_AGGREGATE_USAGE.md`](./aggregate/VANILLA_AGGREGATE_USAGE.md) - Single metric guide
-- [`aggregate/BATCH_QUERY_GUIDE.md`](./aggregate/BATCH_QUERY_GUIDE.md) - Batch query guide (50+ metrics)
+- [`aggregate/README.md`](./aggregate/README.md) - Complete usage guide
+- [`aggregate/LEARNINGS.md`](./aggregate/LEARNINGS.md) - Query patterns and learnings
 
 **Use cases:**
 - Query aggregated metrics (employeeCount, turnoverRate, etc.)
@@ -249,13 +241,12 @@ pip install -r requirements.txt
 - **Walkthrough**: `sdk/interactive_walkthrough.py` - Command-line tutorial
 
 ### Aggregate Module
-- **Usage Guide**: [`aggregate/VANILLA_AGGREGATE_USAGE.md`](./aggregate/VANILLA_AGGREGATE_USAGE.md) - Single metric queries
-- **Batch Guide**: [`aggregate/BATCH_QUERY_GUIDE.md`](./aggregate/BATCH_QUERY_GUIDE.md) - Batch queries (50+ metrics)
-- **API Reference**: [`aggregate/AGGREGATE_QUERY_API_REFERENCE.md`](./aggregate/AGGREGATE_QUERY_API_REFERENCE.md) - Full API schema
-- **Implementation Plan**: [`aggregate/AGGREGATE_QUERY_PLAN.md`](./aggregate/AGGREGATE_QUERY_PLAN.md) - Development plan
+- **Usage Guide**: [`aggregate/README.md`](./aggregate/README.md) - Complete usage guide and examples
+- **Learnings**: [`aggregate/LEARNINGS.md`](./aggregate/LEARNINGS.md) - Query patterns, time intervals, and best practices
+- **API Reference**: [`docs/api/openapi.json`](./docs/api/openapi.json) - OpenAPI specification
 
 ### Reference
-- **Progress Tracking**: [`PROGRESS.md`](./PROGRESS.md) - Project progress
+- **Progress Tracking**: [`docs/planning/PROGRESS.md`](./docs/planning/PROGRESS.md) - Project progress
 
 ## 🔗 Resources
 
@@ -267,13 +258,13 @@ pip install -r requirements.txt
 
 ## 📋 Roadmap
 
-See [`PRODUCTIFICATION_ROADMAP.md`](./PRODUCTIFICATION_ROADMAP.md) for the complete roadmap to productify the Visier Alpine Platform Postman Collection into a production-ready Python workflow.
+See [`docs/planning/PRODUCTIFICATION_ROADMAP.md`](./docs/planning/PRODUCTIFICATION_ROADMAP.md) for the complete roadmap to productify the Visier Alpine Platform Postman Collection into a production-ready Python workflow.
 
 ## 💡 Tips
 
 - **For detailed queries**: Start with `sdk/visier_sdk_walkthrough.ipynb`
-- **For aggregate metrics**: Use `aggregate/aggregate_query_vanilla.py`
-- **For batch queries**: See `aggregate/BATCH_QUERY_GUIDE.md`
+- **For aggregate metrics**: Use `aggregate/scripts/run_query.py` or `aggregate/aggregate_query_vanilla.py`
+- **For query patterns**: See `aggregate/LEARNINGS.md`
 - **Experiment**: Try modifying queries to see what happens
 - **Check output**: Each script shows what's happening
 
@@ -291,4 +282,4 @@ Before you start, make sure you have:
 **Ready to start?**
 
 - **For detailed queries**: Open `sdk/visier_sdk_walkthrough.ipynb` 🚀
-- **For aggregate queries**: See `aggregate/VANILLA_AGGREGATE_USAGE.md` 📊
+- **For aggregate queries**: See `aggregate/README.md` 📊

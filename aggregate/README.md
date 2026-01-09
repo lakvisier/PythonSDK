@@ -1,184 +1,63 @@
-# Aggregate Query Runner
+# Aggregate Query Module
 
-Easy workflow for running and debugging Visier aggregate queries.
+RESTful API-based aggregate queries for Visier Platform (no SDK dependencies).
 
 ## Quick Start
 
 ```bash
-# Run with default payload file
-python aggregate/run_query.py
+# Run query with default example
+python aggregate/scripts/run_query.py
 
-# Run with custom payload file
-python aggregate/run_query.py --file aggregate/query_payload_examples.json
+# Run with custom payload
+python aggregate/scripts/run_query.py --file aggregate/examples/query_payload_examples.json
 ```
 
-## Workflow
-
-### 1. Edit Your Query Payload
-
-Edit `aggregate/query_payload_examples.json` to define your query:
-
-```json
-{
-  "payload": {
-    "query": {
-      "source": {"metric": "employeeCount"},
-      "axes": [...],
-      "filters": [...],
-      "timeIntervals": {...}
-    }
-  }
-}
-```
-
-### 2. Validate Before Running
-
-```bash
-# Check if payload is valid (doesn't execute query)
-python aggregate/run_query.py --validate-only
-```
-
-### 3. Run with Debug Info
-
-```bash
-# See payload, config, and detailed execution steps
-python aggregate/run_query.py --debug
-
-# Or just verbose output
-python aggregate/run_query.py --verbose
-```
-
-### 4. Save Results
-
-```bash
-# Auto-saves to output/query_results.csv by default
-python aggregate/run_query.py
-
-# Or specify custom output file
-python aggregate/run_query.py --output my_results.csv
-```
-
-## Command Line Options
-
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--file` | `-f` | Path to JSON payload file (default: `aggregate/query_payload_examples.json`) |
-| `--output` | `-o` | CSV file path to save results |
-| `--debug` | `-d` | Show payload, headers, and detailed execution info |
-| `--verbose` | `-v` | Show detailed execution steps |
-| `--save-payload` | | Save the loaded payload to a file (for inspection) |
-| `--validate-only` | | Only validate payload structure, don't execute |
-| `--no-save` | | Don't auto-save results to CSV |
-
-## Examples
-
-### Basic Usage
-
-```bash
-# Run query with default settings
-python aggregate/run_query.py
-```
-
-### Debugging
-
-```bash
-# Full debug output
-python aggregate/run_query.py --debug
-
-# Validate payload structure
-python aggregate/run_query.py --validate-only
-
-# Save payload for inspection
-python aggregate/run_query.py --save-payload my_payload.json
-```
-
-### Custom Files
-
-```bash
-# Use different payload file
-python aggregate/run_query.py --file my_query.json
-
-# Save to custom location
-python aggregate/run_query.py --output /path/to/results.csv
-```
-
-## Discovering Dimension Levels
-
-For parent-child hierarchies like `Organization_Hierarchy`, you need to discover the correct level IDs.
-
-### Quick Discovery
-
-```bash
-# Discover levels for Organization_Hierarchy
-python aggregate/discover_dimension_levels.py Organization_Hierarchy
-
-# Get only level IDs (for scripting)
-python aggregate/discover_dimension_levels.py Organization_Hierarchy --level-ids-only
-```
-
-The script will suggest common level IDs to try. For parent-child hierarchies, you may need to test each level ID with a query to find the correct one.
-
-### Common Level IDs for Organization_Hierarchy
-
-- `["Profit_Center"]` - Most common top level
-- `["Business_Unit"]` - Second level
-- `["Department"]` - Third level
-- `["Level_1"]`, `["Level_2"]`, `["Level_3"]` - Generic levels
-- `["Organization_Hierarchy"]` - Sometimes the dimension name itself
-
-**Note:** Level IDs are tenant-specific. Always verify with a test query!
-
-## Troubleshooting
-
-### Payload Validation Errors
-
-If you see validation errors, check:
-- `query.source.metric` exists
-- `query.axes` has at least one axis
-- Each axis has `dimensionLevelSelection.dimension.name`
-- Each axis has `dimensionLevelSelection.levelIds` (non-empty)
-
-### API Errors
-
-Common issues:
-- **400 Bad Request**: Check dimension names and level IDs match your tenant
-- **401 Unauthorized**: Check `.env` file has correct credentials
-- **404 Not Found**: Check metric ID exists in your tenant
-
-Use `--debug` to see the exact payload being sent.
-
-### No Data Returned
-
-If query succeeds but returns empty DataFrame:
-- Check time period has data
-- Verify filters aren't too restrictive
-- Confirm metric ID is correct
-- Check you have permissions for the data
-
-## File Structure
+## Structure
 
 ```
 aggregate/
 ├── aggregate_query_vanilla.py    # Core query functions
-├── query_payload_examples.json   # Query payload definition
-├── run_query.py                  # CLI runner (this tool)
-└── output/                       # Auto-saved results
-    └── query_results.csv
+├── scripts/                       # CLI tools
+│   ├── run_query.py               # Main query runner
+│   └── discover_dimension_levels.py  # Dimension level discovery
+├── examples/                      # Example payloads
+│   ├── query_payload_examples.json
+│   └── query_payload_examples_org_hierarchy.json
+├── docs/                          # Documentation
+│   ├── README.md                  # Detailed usage guide
+│   └── LEARNINGS.md               # Query patterns and best practices
+├── tests/                         # Test scripts
+└── output/                         # Query results (CSV files)
 ```
 
-## Integration
+## Documentation
 
-You can also use the functions directly in Python:
+- **[Usage Guide](docs/README.md)** - Complete guide with examples
+- **[Learnings](docs/LEARNINGS.md)** - Query patterns, time intervals, and best practices
+- **[Examples](examples/README.md)** - Example payload files
+
+## Features
+
+- ✅ RESTful API queries (no SDK dependencies)
+- ✅ Helper functions for building queries
+- ✅ Dimension member filtering
+- ✅ Time interval support
+- ✅ Direct CSV export via CLI tool
+- ✅ JSON payload-based queries
+
+## Usage in Python
 
 ```python
 from aggregate.aggregate_query_vanilla import (
     execute_vanilla_aggregate_query,
     convert_vanilla_response_to_dataframe,
-    load_query_payload_from_json
+    create_dimension_axis
 )
 
-# Load and execute
-payload = load_query_payload_from_json("aggregate/query_payload_examples.json")
-response = execute_vanilla_aggregate_query(payload=payload)
-df = convert_vanilla_response_to_dataframe(response)
+# Build and execute query
+axes = [create_dimension_axis("Function")]
+response = execute_vanilla_aggregate_query(metric_id="employeeCount", axes=axes)
+df = convert_vanilla_response_to_dataframe(response, metric_id="employeeCount")
 ```
+
+See [docs/README.md](docs/README.md) for complete documentation.

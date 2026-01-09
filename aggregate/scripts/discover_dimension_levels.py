@@ -8,16 +8,16 @@ like Organization_Hierarchy where level IDs are tenant-specific.
 
 Usage:
     # Discover levels for Organization_Hierarchy
-    python aggregate/discover_dimension_levels.py Organization_Hierarchy
+    python aggregate/scripts/discover_dimension_levels.py Organization_Hierarchy
     
     # Discover levels for Country_Cost
-    python aggregate/discover_dimension_levels.py Country_Cost
+    python aggregate/scripts/discover_dimension_levels.py Country_Cost
     
     # Use v2alpha API (includes more details)
-    python aggregate/discover_dimension_levels.py Organization_Hierarchy --api-version v2alpha
+    python aggregate/scripts/discover_dimension_levels.py Organization_Hierarchy --api-version v2alpha
     
     # Get details for a specific analytic object
-    python aggregate/discover_dimension_levels.py Organization_Hierarchy --object-id Employee
+    python aggregate/scripts/discover_dimension_levels.py Organization_Hierarchy --object-id Employee
 """
 
 import os

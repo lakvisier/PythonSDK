@@ -6,22 +6,22 @@ Simple CLI tool for running and debugging aggregate queries.
 
 Usage:
     # Run with default payload file
-    python aggregate/run_query.py
+    python aggregate/scripts/run_query.py
     
     # Run with custom payload file
-    python aggregate/run_query.py --file aggregate/query_payload_examples.json
+    python aggregate/scripts/run_query.py --file aggregate/examples/query_payload_examples.json
     
     # Debug mode (shows payload, headers, etc.)
-    python aggregate/run_query.py --debug
+    python aggregate/scripts/run_query.py --debug
     
     # Verbose mode (shows detailed execution steps)
-    python aggregate/run_query.py --verbose
+    python aggregate/scripts/run_query.py --verbose
     
     # Save payload to file before sending (for inspection)
-    python aggregate/run_query.py --save-payload payload.json
+    python aggregate/scripts/run_query.py --save-payload payload.json
     
     # Validate payload without executing
-    python aggregate/run_query.py --validate-only
+    python aggregate/scripts/run_query.py --validate-only
 """
 
 import os
@@ -128,8 +128,8 @@ def main():
     parser.add_argument(
         "--file", "-f",
         type=str,
-        default="aggregate/query_payload_examples.json",
-        help="Path to JSON file containing the query payload (default: aggregate/query_payload_examples.json)"
+        default=None,
+        help="Path to JSON file containing the query payload (default: aggregate/examples/query_payload_examples.json)"
     )
     parser.add_argument(
         "--output", "-o",
@@ -165,6 +165,14 @@ def main():
     )
     
     args = parser.parse_args()
+    
+    # Set default file if not provided
+    if args.file is None:
+        # Default to examples directory relative to aggregate root
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        aggregate_dir = os.path.dirname(script_dir)
+        default_file = os.path.join(aggregate_dir, "examples", "query_payload_examples.json")
+        args.file = default_file
     
     # Check if payload file exists
     if not os.path.exists(args.file):
