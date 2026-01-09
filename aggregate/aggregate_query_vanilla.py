@@ -1,56 +1,24 @@
 """
-Vanilla HTTP Aggregate Query Implementation
+Dashboard Query Implementation for Visier Aggregate Metrics
 
-Simple, easy-to-use aggregate query interface for Visier API.
-Follows Postman collection pattern - no SDK dependencies.
+Focused on reproducing dashboard exports with:
+- Multiple metrics (50+) with fiscal year breakdown (2021-2025 year-end values)
+- Global filters: Job Family Group, Worker Type
+- Per-metric filters for some metrics
+- Time dimension as columns (fiscal years: 2021, 2022, 2023, 2024, 2025)
 
-Quick Start:
-    from aggregate_query_vanilla import query_metric
+Usage:
+    from aggregate.aggregate_query_vanilla import query_dashboard_metric, query_dashboard_metrics
     
-    # Simple query - last 6 months
-    df = query_metric("employeeCount", dimensions=["Function"])
+    # Single metric - year-end values for 2021-2025
+    df = query_dashboard_metric("employeeCount", save_csv="output.csv")
     
-    # With time period
-    df = query_metric("employeeCount", dimensions=["Function"], months=6)
-    
-    # Save to CSV
-    df = query_metric("employeeCount", dimensions=["Function"], save_csv="results.csv")
-
-Batch Queries (50+ metrics):
-    from aggregate_query_vanilla import query_multiple_metrics, create_selection_concept_filter
-    
-    # Query 50 metrics with same dimensions and filters
-    metrics = ["employeeCount", "turnoverRate", ...]  # 50 metrics
-    df = query_multiple_metrics(
-        metric_ids=metrics,
-        dimensions=["Function", "Gender"],
-        dimension_member_filters={"Function": ["Engineering", "Sales"]},
-        global_filters=[create_selection_concept_filter("isActive")],
-        save_csv="all_metrics.csv"
-    )
-
-Advanced Usage:
-    from aggregate_query_vanilla import execute_vanilla_aggregate_query
-    
-    result = execute_vanilla_aggregate_query(
-        metric_id="employeeCount",
-        axes=[{
-            "dimensionLevelSelection": {
-                "dimension": {"name": "Function", "qualifyingPath": "Employee"},
-                "levelIds": ["Function"]
-            }
-        }],
-        time_intervals={
-            "dynamicDateFrom": "SOURCE",
-            "intervalPeriodType": "MONTH",
-            "intervalCount": 6,
-            "direction": "BACKWARD"
-        }
-    )
-
-References:
-    - Postman Collection: https://www.postman.com/visier-alpine/visier-alpine-platform/overview
-    - API Reference: See AGGREGATE_QUERY_API_REFERENCE.md
+    # Multiple metrics with per-metric filters
+    configs = [
+        {"metric_id": "employeeCount"},
+        {"metric_id": "turnoverRate", "filters": [...]}
+    ]
+    df = query_dashboard_metrics(configs, save_csv="dashboard_export.csv")
 """
 
 import os
@@ -96,28 +64,56 @@ def get_api_config() -> Dict[str, str]:
     return config
 
 
-def create_dimension_axis(dimension_name: str, qualifying_path: str = "Employee") -> Dict[str, Any]:
+def create_dimension_axis(
+    dimension_name: str,
+    qualifying_path: str = "Employee",
+    level_ids: Optional[List[str]] = None
+) -> Dict[str, Any]:
     """
     Helper function to create a dimension axis easily.
     
+    For parent-child dimensions (like Organization_Hierarchy), you need to specify
+    actual level IDs. Common patterns:
+    - ["Level_1", "Level_2", "Level_3"] (generic levels)
+    - ["Profit_Center", "Business_Unit", "Department"] (named levels)
+    - [dimension_name] (sometimes the dimension name itself works)
+    
+    To discover available level IDs, you may need to:
+    1. Check your Visier tenant's data model documentation
+    2. Use the Dimensions API to list available levels
+    3. Try common level ID patterns
+    
     Args:
-        dimension_name: Name of the dimension (e.g., "Function", "Gender")
+        dimension_name: Name of the dimension (e.g., "Function", "Organization_Hierarchy")
         qualifying_path: Qualifying path (default: "Employee")
+        level_ids: List of level IDs to use. If None, uses [dimension_name] for regular dimensions.
+                   For parent-child dimensions, you MUST specify actual level IDs.
     
     Returns:
         Axis dictionary ready to use in query
     
     Example:
+        # Regular dimension
         axis = create_dimension_axis("Function")
-        # Use in query_metric: dimensions=["Function"]
+        
+        # Parent-child dimension - try dimension name first
+        axis = create_dimension_axis("Organization_Hierarchy", level_ids=["Organization_Hierarchy"])
+        
+        # Parent-child dimension - specific levels (if you know them)
+        axis = create_dimension_axis("Organization_Hierarchy", level_ids=["Profit_Center", "Business_Unit"])
     """
+    if level_ids is None:
+        # Default: use dimension name as level ID (works for regular dimensions)
+        level_ids = [dimension_name]
+    
+    dimension_dict = {"name": dimension_name}
+    if qualifying_path:
+        dimension_dict["qualifyingPath"] = qualifying_path
+    
     return {
         "dimensionLevelSelection": {
-            "dimension": {
-                "name": dimension_name,
-                "qualifyingPath": qualifying_path
-            },
-            "levelIds": [dimension_name]
+            "dimension": dimension_dict,
+            "levelIds": level_ids
         }
     }
 
@@ -193,6 +189,47 @@ def create_selection_concept_filter(concept_name: str, qualifying_path: str = "E
         "selectionConcept": {
             "name": concept_name,
             "qualifyingPath": qualifying_path
+        }
+    }
+
+
+def create_time_axis(
+    time_dimension_name: str = "Time",
+    time_level_id: str = "FISCAL_YEAR",
+    qualifying_path: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Create a Time dimension axis for time-based grouping (e.g., fiscal years).
+    
+    This is used when you want Time as a column/row dimension (e.g., FY 2022, FY 2023, etc.)
+    rather than just filtering by time period.
+    
+    NOTE: The exact dimension name and level ID may vary by tenant.
+    Common options:
+    - Dimension name: "Time", "Fiscal_Year", "Calendar_Year"
+    - Level ID: "FISCAL_YEAR", "YEAR", "FiscalYear", "CalendarYear"
+    - Qualifying path: May not be needed for Time dimension (try None first)
+    
+    Args:
+        time_dimension_name: Name of the Time dimension (default: "Time")
+        time_level_id: Level ID for the time period (default: "FISCAL_YEAR")
+        qualifying_path: Qualifying path (default: None - try without first)
+    
+    Returns:
+        Axis dictionary for Time dimension
+    
+    Example:
+        # Use Time as a dimension to get yearly breakdown
+        time_axis = create_time_axis("Time", "FISCAL_YEAR")
+    """
+    dimension_dict = {"name": time_dimension_name}
+    if qualifying_path:
+        dimension_dict["qualifyingPath"] = qualifying_path
+    
+    return {
+        "dimensionLevelSelection": {
+            "dimension": dimension_dict,
+            "levelIds": [time_level_id]
         }
     }
 
@@ -344,8 +381,52 @@ def get_asid_token(config: Optional[Dict[str, str]] = None) -> str:
     return token
 
 
+def load_query_payload_from_json(json_file_path: str) -> Dict[str, Any]:
+    """
+    Load query payload from a JSON file.
+    
+    The JSON file should have a "payload" key containing the query structure,
+    or the payload can be at the root level.
+    
+    Args:
+        json_file_path: Path to the JSON file containing the query payload
+    
+    Returns:
+        Query payload dictionary ready to send to the API
+    
+    Example JSON structure:
+        {
+          "payload": {
+            "query": {
+              "source": {"metric": "employeeCount"},
+              "axes": [...],
+              ...
+            }
+          }
+        }
+    
+    Raises:
+        FileNotFoundError: If the file doesn't exist
+        json.JSONDecodeError: If the file is not valid JSON
+        ValueError: If the payload structure is invalid
+    """
+    if not os.path.exists(json_file_path):
+        raise FileNotFoundError(f"Payload file not found: {json_file_path}")
+    
+    with open(json_file_path, 'r') as f:
+        data = json.load(f)
+    
+    # Check if payload is nested under "payload" key
+    if "payload" in data:
+        return data["payload"]
+    # Otherwise, assume the entire JSON is the payload
+    return data
+
+
 def execute_vanilla_aggregate_query(
-    metric_id: str,
+    payload: Optional[Dict[str, Any]] = None,
+    payload_file: Optional[str] = None,
+    metric_id: Optional[str] = None,
     axes: Optional[List[Dict[str, Any]]] = None,
     filters: Optional[List[Dict[str, Any]]] = None,
     time_intervals: Optional[Dict[str, Any]] = None,
@@ -363,8 +444,10 @@ def execute_vanilla_aggregate_query(
     giving us full control over the request payload.
     
     Args:
-        metric_id: The metric ID to query
-        axes: List of axis definitions (required)
+        payload: Complete query payload dictionary. If provided, all other parameters are ignored.
+        payload_file: Path to JSON file containing the query payload. If provided, loads from file.
+        metric_id: The metric ID to query (only used if payload/payload_file not provided)
+        axes: List of axis definitions (required if building payload from scratch)
         filters: Optional list of filter definitions
         time_intervals: Optional time interval specification
         parameter_values: Optional parameter values
@@ -378,6 +461,11 @@ def execute_vanilla_aggregate_query(
     Raises:
         ValueError: If required parameters are missing
         requests.HTTPError: If API request fails
+    
+    Priority:
+        1. payload (direct dict) - highest priority
+        2. payload_file (JSON file path) - second priority
+        3. Build from individual parameters (metric_id, axes, etc.) - fallback
     """
     if config is None:
         config = get_api_config()
@@ -386,15 +474,27 @@ def execute_vanilla_aggregate_query(
     if asid_token is None:
         asid_token = get_asid_token(config)
     
-    # Build the query payload
-    payload = build_vanilla_aggregate_query(
-        metric_id=metric_id,
-        axes=axes,
-        filters=filters,
-        time_intervals=time_intervals,
-        parameter_values=parameter_values,
-        options=options
-    )
+    # Load or build the query payload
+    if payload is not None:
+        # Use provided payload directly
+        query_payload = payload
+    elif payload_file is not None:
+        # Load payload from JSON file
+        query_payload = load_query_payload_from_json(payload_file)
+    else:
+        # Build payload from individual parameters (backward compatibility)
+        if not metric_id or not axes:
+            raise ValueError(
+                "Either 'payload', 'payload_file', or both 'metric_id' and 'axes' must be provided"
+            )
+        query_payload = build_vanilla_aggregate_query(
+            metric_id=metric_id,
+            axes=axes,
+            filters=filters,
+            time_intervals=time_intervals,
+            parameter_values=parameter_values,
+            options=options
+        )
     
     # Build the API URL (Postman collection pattern)
     # Try both endpoints - Postman may use /v1/aggregate or /v1/data/query/aggregate
@@ -429,25 +529,38 @@ def execute_vanilla_aggregate_query(
     # Make the request
     response = requests.post(
         url,
-        json=payload,  # requests will automatically JSON-encode this
+        json=query_payload,  # requests will automatically JSON-encode this
         headers=headers,
         cookies=cookies,  # ASID token as cookie (Postman pattern)
         params=params
     )
     
     # Check for errors
+    if response.status_code != 200:
+        # Try to get error details from response
+        try:
+            error_data = response.json()
+            error_msg = f"API Error {response.status_code}: {error_data}"
+        except:
+            error_msg = f"API Error {response.status_code}: {response.text}"
+        raise requests.HTTPError(f"{error_msg}\nURL: {url}\nPayload: {json.dumps(query_payload, indent=2)}")
+    
     response.raise_for_status()
     
     # Parse and return response
     return response.json()
 
 
-def convert_vanilla_response_to_dataframe(response: Dict[str, Any]) -> 'pd.DataFrame':
+def convert_vanilla_response_to_dataframe(
+    response: Dict[str, Any],
+    metric_id: Optional[str] = None
+) -> 'pd.DataFrame':  # type: ignore
     """
     Convert vanilla API response (CellSetDTO) to pandas DataFrame.
     
     Args:
         response: The API response dictionary (CellSetDTO structure)
+        metric_id: Optional metric ID to add as a column. If None, will try to extract from response.
     
     Returns:
         pandas DataFrame with dimension columns and metric value column
@@ -470,6 +583,19 @@ def convert_vanilla_response_to_dataframe(response: Dict[str, Any]) -> 'pd.DataF
     if not cells:
         return pd.DataFrame()
     
+    # Try to extract metric name from response if not provided
+    if metric_id is None:
+        # Check if there's a Measures axis or source information
+        for axis in axes:
+            # Look for measure/metric information in axes
+            if "measure" in axis or "metric" in axis:
+                metric_id = axis.get("measure") or axis.get("metric")
+                break
+        # Also check response metadata
+        if metric_id is None and "source" in response:
+            source = response.get("source", {})
+            metric_id = source.get("metric") or source.get("measure")
+    
     if not axes:
         # No axes - just return metric values
         values = []
@@ -482,12 +608,34 @@ def convert_vanilla_response_to_dataframe(response: Dict[str, Any]) -> 'pd.DataF
                     values.append(float(cell_value))
                 except (ValueError, TypeError):
                     values.append(None)
-        return pd.DataFrame({"value": values})
+        df = pd.DataFrame({"value": values})
+        if metric_id:
+            df["Measures"] = metric_id
+        return df
     
     # Build dimension names from axes
     dimension_names = []
-    for axis in axes:
-        if "dimension" in axis and axis["dimension"]:
+    measures_axis_idx = None
+    for i, axis in enumerate(axes):
+        # Check if this is a Measures axis (contains metric/measure info)
+        if "measure" in axis or "metric" in axis or "measures" in str(axis).lower():
+            measures_axis_idx = i
+            # Try to extract metric name from this axis
+            if metric_id is None:
+                metric_id = axis.get("measure") or axis.get("metric")
+                # Check positions for measure names
+                if "positions" in axis and axis["positions"]:
+                    pos = axis["positions"][0]
+                    if "path" in pos:
+                        path = pos["path"]
+                        if isinstance(path, list) and len(path) > 0:
+                            metric_id = str(path[-1])
+                        else:
+                            metric_id = str(path)
+                    elif "members" in pos and pos["members"]:
+                        metric_id = pos["members"][0].get("name") or pos["members"][0].get("memberId")
+            dimension_names.append("Measures")
+        elif "dimension" in axis and axis["dimension"]:
             dim_name = axis["dimension"].get("name", f"Dimension_{len(dimension_names)}")
             dimension_names.append(dim_name)
         else:
@@ -529,7 +677,11 @@ def convert_vanilla_response_to_dataframe(response: Dict[str, Any]) -> 'pd.DataF
                 if i < len(axis_positions):
                     dim_name = dimension_names[i] if i < len(dimension_names) else f"Dimension_{i}"
                     pos_map = axis_positions[i]
-                    row[dim_name] = pos_map.get(coord_idx, f"Position_{coord_idx}")
+                    # For Measures axis, use the metric_id if available, otherwise use position name
+                    if dim_name == "Measures" and metric_id:
+                        row[dim_name] = metric_id
+                    else:
+                        row[dim_name] = pos_map.get(coord_idx, f"Position_{coord_idx}")
         
         # Add metric value (handle empty strings and None)
         cell_value = cell.get("value")
@@ -554,202 +706,174 @@ def convert_vanilla_response_to_dataframe(response: Dict[str, Any]) -> 'pd.DataF
         
         rows.append(row)
     
-    return pd.DataFrame(rows)
-
-
-def query_metric(
-    metric_id: str,
-    dimensions: Optional[List[str]] = None,
-    qualifying_path: str = "Employee",
-    months: int = 6,
-    direction: str = "BACKWARD",
-    save_csv: Optional[str] = None,
-    filters: Optional[List[Dict[str, Any]]] = None,
-    options: Optional[Dict[str, Any]] = None
-) -> 'pd.DataFrame':
-    """
-    Simple function to query a metric and get results as a DataFrame.
+    df = pd.DataFrame(rows)
     
-    This is the easiest way to use aggregate queries - just provide the metric
-    and dimensions, and get back a pandas DataFrame.
-    
-    Args:
-        metric_id: The metric to query (e.g., "employeeCount")
-        dimensions: List of dimension names (e.g., ["Function", "Gender"])
-                   If None, uses just the metric (no grouping)
-        qualifying_path: Qualifying path for dimensions (default: "Employee")
-        months: Number of months to query (default: 6)
-        direction: "BACKWARD" (last N months) or "FORWARD" (next N months)
-        save_csv: Optional filename to save results as CSV
-        filters: Optional list of filter definitions
-        options: Optional query options
-    
-    Returns:
-        pandas DataFrame with results
-    
-    Example:
-        # Simple query - last 6 months by Function
-        df = query_metric("employeeCount", dimensions=["Function"])
-        
-        # Multiple dimensions
-        df = query_metric("employeeCount", dimensions=["Function", "Gender"])
-        
-        # Save to CSV
-        df = query_metric("employeeCount", dimensions=["Function"], save_csv="results.csv")
-        
-        # Different time period
-        df = query_metric("employeeCount", dimensions=["Function"], months=12)
-    """
-    import pandas as pd
-    
-    # Build axes from dimension names
-    axes = None
-    if dimensions:
-        axes = [create_dimension_axis(dim, qualifying_path) for dim in dimensions]
-    else:
-        # At least one axis is required - use a simple time axis or default
-        # Actually, let's require at least one dimension for simplicity
-        raise ValueError(
-            "At least one dimension is required. "
-            "Example: query_metric('employeeCount', dimensions=['Function'])"
-        )
-    
-    # Build time intervals (last N months by default)
-    time_intervals = {
-        "dynamicDateFrom": "SOURCE",
-        "intervalPeriodType": "MONTH",
-        "intervalCount": months,
-        "direction": direction
-    }
-    
-    # Execute query
-    response = execute_vanilla_aggregate_query(
-        metric_id=metric_id,
-        axes=axes,
-        filters=filters,
-        time_intervals=time_intervals,
-        options=options
-    )
-    
-    # Convert to DataFrame
-    df = convert_vanilla_response_to_dataframe(response)
-    
-    # Save to CSV if requested
-    if save_csv:
-        df.to_csv(save_csv, index=False)
-        print(f"✓ Results saved to: {save_csv}")
+    # If we have a metric_id but no Measures column, add it
+    if metric_id and "Measures" not in df.columns:
+        df.insert(0, "Measures", metric_id)
     
     return df
 
 
-def query_multiple_metrics(
-    metric_ids: List[str],
-    dimensions: List[str],
-    qualifying_path: str = "Employee",
-    months: int = 6,
-    direction: str = "BACKWARD",
-    dimension_member_filters: Optional[Dict[str, List[str]]] = None,
-    global_filters: Optional[List[Dict[str, Any]]] = None,
-    options: Optional[Dict[str, Any]] = None,
+def query_dashboard_metrics(
+    metric_configs: List[Dict[str, Any]],
+    job_family_group: Optional[str] = None,
+    worker_type: Optional[str] = None,
+    start_year: int = 2021,
+    end_year: int = 2025,
+    org_hierarchy_level_id: Optional[str] = None,
     save_csv: Optional[str] = None,
     progress: bool = True
-) -> 'pd.DataFrame':
+) -> 'pd.DataFrame':  # type: ignore
     """
-    Query multiple metrics with the same dimensions and filters.
+    Query multiple metrics for dashboard export with fiscal year breakdown.
     
-    This is optimized for batch queries where you want to pull many metrics
-    (e.g., 50 metrics) with the same structure:
-    - Same dimensions (2-3 dimensions)
-    - Same dimension member filters (focus on specific members)
-    - Same global filters (apply to all metrics)
+    This is the main function for dashboard reproduction:
+    - Multiple metrics (50+) with per-metric filters
+    - Fiscal years as Time dimension (2021-2025 year-end values by default)
+    - Global filters: Job Family Group and Worker Type
     
     Args:
-        metric_ids: List of metric IDs to query (e.g., ["employeeCount", "turnoverRate"])
-        dimensions: List of dimension names for grouping (e.g., ["Function", "Gender"])
-        qualifying_path: Qualifying path for dimensions (default: "Employee")
-        months: Number of months to query (default: 6)
-        direction: "BACKWARD" (last N months) or "FORWARD" (next N months)
-        dimension_member_filters: Dict mapping dimension names to lists of members to include.
-                                  Example: {"Function": ["Engineering", "Sales"], "Gender": ["Male"]}
-                                  If None, includes all members for all dimensions.
-        global_filters: List of filter definitions that apply to all metrics.
-                        Can include selection concepts, member sets, etc.
-                        Example: [create_selection_concept_filter("isManager")]
-        options: Optional query options
+        metric_configs: List of metric configurations. Each config is a dict with:
+            - "metric_id": The metric ID (required)
+            - "filters": Optional list of additional filters for this metric only
+            Example: [
+                {"metric_id": "employeeCount"},
+                {"metric_id": "turnoverRate"},
+                {"metric_id": "resignationRate", "filters": [create_member_set_filter("Tenure_Range", included_members=["<12"])]}
+            ]
+        job_family_group: Job Family Group filter (optional). If None, no filter applied.
+                          NOTE: Dimension name may vary (e.g., "Job_Family_Group", "JobFamilyGroup")
+        worker_type: Worker Type filter (optional). If None, no filter applied.
+                     NOTE: Dimension name may vary (e.g., "Worker_Type", "WorkerType", "Status")
+        start_year: Start fiscal year (default: 2021)
+        end_year: End fiscal year (default: 2025)
+        org_hierarchy_level_id: Single level ID for Organization_Hierarchy (parent-child dimension).
+                                If None, uses default "Profit_Center" (top level).
+                                To find actual level IDs, use Dimensions API or check tenant docs.
+                                Common options: "Profit_Center", "Business_Unit", "Department", "Level_1"
         save_csv: Optional filename to save combined results as CSV
         progress: Whether to show progress (default: True)
     
     Returns:
-        pandas DataFrame with all metrics combined. Each row has:
-        - Dimension columns (Function, Gender, etc.)
-        - Metric columns (one per metric_id)
-        - Time period columns (DateInRange, etc.)
+        pandas DataFrame with all metrics combined
     
     Example:
-        # Query 50 metrics by Function and Gender, only for Engineering and Sales
-        metrics = ["employeeCount", "turnoverRate", "headcount", ...]  # 50 metrics
-        df = query_multiple_metrics(
-            metric_ids=metrics,
-            dimensions=["Function", "Gender"],
-            dimension_member_filters={"Function": ["Engineering", "Sales"]},
-            global_filters=[create_selection_concept_filter("isActive")],
-            save_csv="all_metrics.csv"
-        )
+        # Query 50 metrics for dashboard
+        configs = [
+            {"metric_id": "employeeCount"},
+            {"metric_id": "turnoverRate"},
+            {"metric_id": "resignationRate", "filters": [create_member_set_filter("Tenure_Range", included_members=["<12"])]}
+        ]
+        df = query_dashboard_metrics(configs, save_csv="dashboard_export.csv")
     """
     import pandas as pd
     
-    if not metric_ids:
-        raise ValueError("At least one metric_id is required")
+    if not metric_configs:
+        raise ValueError("At least one metric config is required")
     
-    if not dimensions:
-        raise ValueError("At least one dimension is required")
+    # Build axes: Time for fiscal year breakdown
+    # NOTE: Time dimension may not need qualifying path - try without first
+    time_axis = create_time_axis(
+        time_dimension_name="Time",  # Adjust if needed for your tenant
+        time_level_id="FISCAL_YEAR",  # Adjust if needed (try "YEAR", "FiscalYear", etc.)
+        qualifying_path=None  # Try None first - Time dimension may not need qualifying path
+    )
+    axes = [time_axis]
     
-    # Build axes
-    axes = [create_dimension_axis(dim, qualifying_path) for dim in dimensions]
+    # Add Organization_Hierarchy axis (always included for dashboard queries)
+    # For parent-child dimensions like Organization_Hierarchy, you MUST specify actual level IDs.
+    # 
+    # To discover level IDs:
+    # 1. Use the Dimensions API: GET /v1/data/model/dimensions/{dimensionName}/levels
+    # 2. Check your Visier tenant's data model documentation
+    # 3. Try common single level options:
+    #    - "Profit_Center" (top level, most common)
+    #    - "Business_Unit"
+    #    - "Department"
+    #    - "Level_1" (generic)
+    #
+    # Use provided level ID or default to top level
+    if org_hierarchy_level_id is None:
+        # Default: top level (most common)
+        org_hierarchy_level_id = "Profit_Center"  # TODO: Replace with actual level ID from your tenant
     
-    # Build dimension member filters
-    all_filters = []
-    if dimension_member_filters:
-        for dim_name, members in dimension_member_filters.items():
-            filter_dict = create_member_set_filter(
-                dim_name,
-                included_members=members,
-                qualifying_path=qualifying_path
-            )
-            all_filters.append(filter_dict)
+    org_axis = create_dimension_axis(
+        dimension_name="Organization_Hierarchy",  # Adjust if needed
+        qualifying_path="Employee",  # May need to be None or different
+        level_ids=[org_hierarchy_level_id]  # Single level
+    )
+    axes.append(org_axis)
     
-    # Add global filters
-    if global_filters:
-        all_filters.extend(global_filters)
+    # Build global filters (only if provided)
+    global_filters = []
+    if job_family_group:
+        # NOTE: Adjust dimension_name if it differs in your tenant
+        # Common variations: "Job_Family_Group", "JobFamilyGroup", "Job_Family", "JobFamily"
+        global_filters.append(create_member_set_filter(
+            dimension_name="Job_Family_Group",  # Adjust if needed
+            included_members=[job_family_group],
+            qualifying_path="Employee"
+        ))
+    if worker_type:
+        # NOTE: Adjust dimension_name if it differs in your tenant
+        # Common variations: "Worker_Type", "WorkerType", "Status", "Employee_Status"
+        global_filters.append(create_member_set_filter(
+            dimension_name="Worker_Type",  # Adjust if needed
+            included_members=[worker_type],
+            qualifying_path="Employee"
+        ))
     
-    # Build time intervals
+    # Build time intervals for fiscal years (year ends)
+    # Query from start of first year, forward for N years
+    # The Time axis will break this down into individual fiscal years (year-end values)
+    num_years = end_year - start_year + 1
     time_intervals = {
-        "dynamicDateFrom": "SOURCE",
-        "intervalPeriodType": "MONTH",
-        "intervalCount": months,
-        "direction": direction
+        "fromDateTime": f"{start_year}-01-01",  # Start of first fiscal year
+        "intervalPeriodType": "YEAR",
+        "intervalCount": num_years,
+        "direction": "FORWARD"
     }
     
-    # Query each metric and combine results
-    all_dfs = []
-    total_metrics = len(metric_ids)
+    # Note: The Time axis with FISCAL_YEAR level will return year-end values
+    # Adjust fromDateTime if your fiscal year doesn't start on Jan 1
+    # For example, if fiscal year starts Oct 1: f"{start_year-1}-10-01"
     
-    for i, metric_id in enumerate(metric_ids):
+    # Query each metric with its specific filters
+    all_dfs = []
+    metric_ids = []
+    total_metrics = len(metric_configs)
+    
+    for i, config in enumerate(metric_configs):
+        metric_id = config.get("metric_id")
+        if not metric_id:
+            raise ValueError(f"Metric config {i} missing 'metric_id'")
+        
+        metric_ids.append(metric_id)
+        metric_filters = config.get("filters", [])
+        
+        # Combine global filters and metric-specific filters
+        all_filters = []
+        if global_filters:
+            all_filters.extend(global_filters)
+        if metric_filters:
+            all_filters.extend(metric_filters)
+        
         if progress:
-            print(f"Querying {metric_id} ({i+1}/{total_metrics})...", end=" ", flush=True)
+            filter_info = f" (+{len(metric_filters)} metric filters)" if metric_filters else ""
+            print(f"Querying {metric_id} ({i+1}/{total_metrics}){filter_info}...", end=" ", flush=True)
         
         try:
             response = execute_vanilla_aggregate_query(
                 metric_id=metric_id,
                 axes=axes,
                 filters=all_filters if all_filters else None,
-                time_intervals=time_intervals,
-                options=options
+                time_intervals=time_intervals
             )
             
-            df = convert_vanilla_response_to_dataframe(response)
+            df = convert_vanilla_response_to_dataframe(response, metric_id=metric_id)
             
-            # Rename 'value' column to metric_id to distinguish metrics
+            # Rename 'value' column to metric_id
             if "value" in df.columns:
                 df = df.rename(columns={"value": metric_id})
             
@@ -761,14 +885,12 @@ def query_multiple_metrics(
         except Exception as e:
             if progress:
                 print(f"✗ Error: {e}")
-            # Continue with other metrics even if one fails
             continue
     
     if not all_dfs:
         raise ValueError("No metrics were successfully queried")
     
-    # Merge all DataFrames on dimension columns
-    # Find common dimension columns (exclude metric columns, Measures, DateInRange, support)
+    # Merge all DataFrames on dimension columns (same logic as query_multiple_metrics)
     dimension_cols = set()
     for df in all_dfs:
         for col in df.columns:
@@ -777,17 +899,13 @@ def query_multiple_metrics(
     
     dimension_cols = sorted(list(dimension_cols))
     
-    # Start with first DataFrame
     combined_df = all_dfs[0].copy()
     
-    # Merge remaining DataFrames
     for df in all_dfs[1:]:
-        # Merge on dimension columns and time columns
         merge_cols = dimension_cols.copy()
         if "DateInRange" in combined_df.columns and "DateInRange" in df.columns:
             merge_cols.append("DateInRange")
         
-        # Only merge if we have merge columns
         if merge_cols:
             combined_df = pd.merge(
                 combined_df,
@@ -797,15 +915,13 @@ def query_multiple_metrics(
                 suffixes=("", "_dup")
             )
             
-            # Remove duplicate columns (keep first occurrence)
             for col in combined_df.columns:
                 if col.endswith("_dup"):
                     combined_df = combined_df.drop(columns=[col])
         else:
-            # If no merge columns, just concatenate (shouldn't happen with proper dimensions)
             combined_df = pd.concat([combined_df, df], axis=1)
     
-    # Reorder columns: dimensions first, then metrics, then other columns
+    # Reorder columns
     metric_cols = [m for m in metric_ids if m in combined_df.columns]
     other_cols = [c for c in combined_df.columns if c not in dimension_cols and c not in metric_cols]
     column_order = dimension_cols + metric_cols + other_cols
@@ -820,95 +936,141 @@ def query_multiple_metrics(
     return combined_df
 
 
-def display_vanilla_results(df: 'pd.DataFrame', metric_name: str = "Metric"):
+def query_dashboard_metric(
+    metric_id: str,
+    job_family_group: Optional[str] = None,
+    worker_type: Optional[str] = None,
+    start_year: int = 2021,
+    end_year: int = 2025,
+    include_org_hierarchy: bool = True,
+    org_hierarchy_level_id: Optional[str] = None,
+    save_csv: Optional[str] = None
+) -> 'pd.DataFrame':  # type: ignore
     """
-    Display results from vanilla aggregate query.
+    Query a single metric for dashboard export with fiscal year breakdown.
+    
+    This is a simplified function for dashboard reproduction:
+    - Single metric
+    - Fiscal years as Time dimension (2021-2025 year-end values by default)
+    - Global filters: Job Family Group and Worker Type
     
     Args:
-        df: The DataFrame to display
-        metric_name: Name of the metric for display purposes
-    """
-    if df is None or df.empty:
-        print(f"\nNo data returned from {metric_name} query.")
-        return
+        metric_id: The metric to query (e.g., "employeeCount")
+        job_family_group: Job Family Group filter (optional). If None, no filter applied.
+                          NOTE: Dimension name may vary (e.g., "Job_Family_Group", "JobFamilyGroup")
+        worker_type: Worker Type filter (optional). If None, no filter applied.
+                     NOTE: Dimension name may vary (e.g., "Worker_Type", "WorkerType", "Status")
+        start_year: Start fiscal year (default: 2021)
+        end_year: End fiscal year (default: 2025)
+        include_org_hierarchy: Whether to include Organization_Hierarchy grouping (default: True)
+                              Set to False to test with just Time dimension first
+        org_hierarchy_level_id: Single level ID for Organization_Hierarchy (parent-child dimension).
+                                If None, uses default "Profit_Center" (top level).
+                                To find actual level IDs, use Dimensions API or check tenant docs.
+                                Common options: "Profit_Center", "Business_Unit", "Department", "Level_1"
+        save_csv: Optional filename to save results as CSV
     
-    print("\n" + "=" * 70)
-    print(f"{metric_name} Query Results")
-    print("=" * 70)
-    print(f"\nFound {len(df)} result(s):\n")
+    Returns:
+        pandas DataFrame with Time dimension and metric values
     
-    # Display first 50 rows
-    print(df.head(50).to_string(index=False))
-    
-    if len(df) > 50:
-        print(f"\n... and {len(df) - 50} more rows")
-    
-    print(f"\nSummary:")
-    print(f"  Total rows: {len(df)}")
-    print(f"  Columns: {', '.join(df.columns)}")
-    if "value" in df.columns:
-        print(f"  Value range: {df['value'].min():.2f} - {df['value'].max():.2f}")
-        print(f"  Total value: {df['value'].sum():.2f}")
-    print()
-
-
-def main():
-    """
-    Main function - demonstrates simple usage of query_metric().
-    """
-    print("=" * 70)
-    print("Visier Aggregate Query - Simple Demo")
-    print("=" * 70)
-    print()
-    
-    try:
-        # Simple usage example
-        print("Querying employeeCount by Function and Pay_Level (last 6 months)...")
-        print()
+    Example:
+        # Query employeeCount for Sales employees, fiscal years 2021-2025
+        df = query_dashboard_metric("employeeCount")
         
-        import os
-        # Save to output directory relative to this script
-        output_dir = os.path.join(os.path.dirname(__file__), "output")
-        os.makedirs(output_dir, exist_ok=True)
-        output_file = os.path.join(output_dir, "aggregate_query_results.csv")
-        
-        df = query_metric(
-            metric_id="employeeCount",
-            dimensions=["Function", "Pay_Level"],
-            months=6,
-            save_csv=output_file
+        # Custom filters and years
+        df = query_dashboard_metric(
+            "headcount",
+            job_family_group="Engineering",
+            start_year=2022,
+            end_year=2025
         )
+    """
+    import pandas as pd
+    
+    # Build axes: Time for fiscal year breakdown
+    # NOTE: Time dimension may not need qualifying path - try without first
+    time_axis = create_time_axis(
+        time_dimension_name="Time",  # Adjust if needed for your tenant
+        time_level_id="FISCAL_YEAR",  # Adjust if needed (try "YEAR", "FiscalYear", etc.)
+        qualifying_path=None  # Try None first - Time dimension may not need qualifying path
+    )
+    axes = [time_axis]
+    
+    # Add Organization_Hierarchy axis if requested
+    if include_org_hierarchy:
+        # For parent-child dimensions like Organization_Hierarchy, you MUST specify actual level IDs.
+        # 
+        # To discover level IDs:
+        # 1. Use the Dimensions API: GET /v1/data/model/dimensions/{dimensionName}/levels
+        # 2. Check your Visier tenant's data model documentation
+        # 3. Try common single level options:
+        #    - "Profit_Center" (top level, most common)
+        #    - "Business_Unit"
+        #    - "Department"
+        #    - "Level_1" (generic)
+        #
+        # Use provided level ID or default to top level
+        if org_hierarchy_level_id is None:
+            # Default: top level (most common)
+            org_hierarchy_level_id = "Profit_Center"  # TODO: Replace with actual level ID from your tenant
         
-        print("\n" + "=" * 70)
-        print("Query Results Summary")
-        print("=" * 70)
-        print(f"  Rows: {len(df)}")
-        print(f"  Columns: {', '.join(df.columns)}")
-        if "value" in df.columns:
-            non_null = df["value"].notna().sum()
-            print(f"  Rows with values: {non_null} / {len(df)}")
-            if non_null > 0:
-                print(f"  Value range: {df['value'].min():.2f} - {df['value'].max():.2f}")
-                print(f"  Total: {df['value'].sum():.2f}")
-        print("=" * 70)
-        print()
-        print("💡 Tip: Use query_metric() in your code:")
-        print("   from aggregate_query_vanilla import query_metric")
-        print("   df = query_metric('employeeCount', dimensions=['Function'])")
-        print()
-        
-    except ValueError as e:
-        print(f"\n✗ Error: {e}")
-        print("\nMake sure you have:")
-        print("  - Set up .env file with your Visier credentials")
-        print("  - Provided at least one dimension")
-        return
-    except Exception as e:
-        print(f"\n✗ Unexpected error: {e}")
-        import traceback
-        traceback.print_exc()
-        return
+        org_axis = create_dimension_axis(
+            dimension_name="Organization_Hierarchy",  # Adjust if needed
+            qualifying_path="Employee",  # May need to be None or different
+            level_ids=[org_hierarchy_level_id]  # Single level
+        )
+        axes.append(org_axis)
+    
+    # Build global filters (only if provided)
+    filters = []
+    if job_family_group:
+        # NOTE: Adjust dimension_name if it differs in your tenant
+        # Common variations: "Job_Family_Group", "JobFamilyGroup", "Job_Family", "JobFamily"
+        filters.append(create_member_set_filter(
+            dimension_name="Job_Family_Group",  # Adjust if needed
+            included_members=[job_family_group],
+            qualifying_path="Employee"
+        ))
+    if worker_type:
+        # NOTE: Adjust dimension_name if it differs in your tenant
+        # Common variations: "Worker_Type", "WorkerType", "Status", "Employee_Status"
+        filters.append(create_member_set_filter(
+            dimension_name="Worker_Type",  # Adjust if needed
+            included_members=[worker_type],
+            qualifying_path="Employee"
+        ))
+    
+    # Build time intervals for fiscal years (year ends)
+    # Query from start of first year, forward for N years
+    # The Time axis will break this down into individual fiscal years (year-end values)
+    num_years = end_year - start_year + 1
+    time_intervals = {
+        "fromDateTime": f"{start_year}-01-01",  # Start of first fiscal year
+        "intervalPeriodType": "YEAR",
+        "intervalCount": num_years,
+        "direction": "FORWARD"
+    }
+    
+    # Note: The Time axis with FISCAL_YEAR level will return year-end values
+    # Adjust fromDateTime if your fiscal year doesn't start on Jan 1
+    # For example, if fiscal year starts Oct 1: f"{start_year-1}-10-01"
+    
+    # Execute query
+    response = execute_vanilla_aggregate_query(
+        metric_id=metric_id,
+        axes=axes,
+        filters=filters,
+        time_intervals=time_intervals
+    )
+    
+    # Convert to DataFrame
+    df = convert_vanilla_response_to_dataframe(response, metric_id=metric_id)
+    
+    # Save to CSV if requested
+    if save_csv:
+        df.to_csv(save_csv, index=False)
+        print(f"✓ Results saved to: {save_csv}")
+    
+    return df
 
 
-if __name__ == "__main__":
-    main()
